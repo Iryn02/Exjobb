@@ -2,7 +2,7 @@
 # Bachelor of Network Engineering - MDU University
 # Thesis work: Lateral Movement in Kubernetes Clusters
 
-import searchFiles as sf
+import search_files as sf
 import subprocess as sp
 import os
 

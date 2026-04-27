@@ -16,7 +16,7 @@ __all__ = ()
 import sys
 from Exjobb.cl_parser import parse_args
 from setup import *
-from searchfiles import *
+from Exjobb.Exjobb.search_files import *
 
 
 
