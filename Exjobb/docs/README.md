@@ -1,17 +1,17 @@
 # tfvulnerability.  Terraform vulnerability scanner and infrastructure environment setup
 
 
-Author: Ida Rynger Johnny Norrman <ida.rynger@gmail.com>
+Author: Ida Rynger Johnny Norrman <ida.rynger@gmail.com> <johnny.norrman@hotmail.com>
 
 Copyright: © 2026, Ida Rynger Johnny Norrman.
 
-Date: 2026-04-27
+Date: 2026-01-19
 
 Version: 0.1.0
 
 
 ## PURPOSE
-
+This tool scans Terraform configurations for security vulnerabilities and automates the setup and deployment of infrastructure environments using Terraform and Kubernetes. It is a tool for analysing the possibilities for lateral movement between Kubernetes clusters based on known and published vulnerabilties on https://kubenomicon.com/
 
 ## INSTALLATION
 
@@ -23,20 +23,10 @@ pip install -r requirements.txt
 python setup.py install
 ```
 
-
-
 ## USAGE
 
 ## NOTES
 
-## UPGRADE
-
-## DONATIONS
-
-I am an independent developer working on Exjobb in my free time,
-if you like Exjobb and would like to say thank you, buy me a beer!
-
-[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=nebbionegiuseppe%40gmail.com&currency_code=EUR&source=url)
 
 ## COPYRIGHT
 

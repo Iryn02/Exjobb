@@ -5,3 +5,6 @@ flake8
 pyinstaller
 pytest
 pytest-cov
+multipass
+kubectl
+terraform
