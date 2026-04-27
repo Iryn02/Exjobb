@@ -5,12 +5,24 @@
 import os
 import search_files as sf
 import subprocess as sp
+import shutil
+import argparse
+from pathlib import Path
 
+SCRIPTS_DIR = Path(__file__).parent
+TERRAFORM_REPO = SCRIPTS_DIR / 'terraform_repo'
 
+ENVIRONMENTS = {
+    '1': ('Base environment',    TERRAFORM_REPO / 'Base'),
+    '2': ('Writable hostpath',   TERRAFORM_REPO / 'Hostpath'),
+    '3': ('Managed identity',    TERRAFORM_REPO / 'managed_identity'),
+    '4': ('Service account',     TERRAFORM_REPO / 'Service_account'),
+}
 class EnvManager:
     installed_list = ['terraform','kubectl']
-    def __init__(self, choice):
-        self.choice = choice
+    def __init__(self, ):
+        #self.choice = choice
+        pass
 
     def check_dependencies(self):# check if needed programs are installed
         results = {}
@@ -36,65 +48,206 @@ class EnvManager:
         except:
             print('Multipass alredy exists')
 
-    def fetch_mainfest(self, choice): #get manifest files for correct assignment
-        ENVIRONMENTS = {'1' : '/home/$USER/Exjobb/scripts/Base/',
-                        '2' : '/home/$USER/Exjobb/scripts/Hostpath/',
-                        '3' : '/home/$USER/Exjobb/scripts/managed_identity/',
-                        '4' : '/home/$USER/Exjobb/scripts/Service_account/',
-                        '5' : '/home/$USER/Exjobb/scripts/',
-                        '6' : '/home/$USER/Exjobb/scripts/'}
-        base_path = ENVIRONMENTS[choice]
-        contents = {}
-        try:
-            for filename in ['main.tf', 'outputs.tf']:
-                with open(os.path.join(base_path, filename), 'r') as f:
-                    contents[filename] = f.read()
+    def deploy_environment(self, choice): #get manifest files for correct assignment
+        """
+        Run terraform init + apply for the selected environment, then join workers.
 
-            result = sp.run(['terraform', 'init'],
-                            cwd=base_path,
-                            capture_output=True,
-                            text=True)
-            print(result.stderr, result.stdout)
-            if result.returncode == 0:
-                result = sp.run(['terraform', 'apply', '-auto-approve'],
-                                cwd=base_path,
-                                capture_output=True,
-                                text=True)
-                print(result.stderr, result.stdout)
-                if result.returncode == 0:
-                    sp.run(['bash','/home/terra/git/exjobb/scripts/join_workers.sh'])
-            if choice == '5':
-                sp.run([sf])
-            if choice == '6':
-                sp.run(['sudo','bash','/home/terra/git/exjobb/scripts/cleanup.sh'])
+        Args:
+            choice: Menu option string ('1'–'4').
+        """
+        label, env_path = ENVIRONMENTS[choice]
+        join_script = TERRAFORM_REPO / 'join_workers.sh'
 
-            else:
-                print('Terraform error', result.stderr, result.stdout)
+        print(f'Deploying: {label}')
 
-            return contents
-        except:
-            print('terraform error', result.stderr, result.stdout)
+        result = sp.run(['terraform', 'init'], cwd=env_path, capture_output=True, text=True)
+        print(result.stdout, result.stderr)
+        if result.returncode != 0:
+            print('terraform init failed')
+            return
 
-    #def run_terraform(self): #terraform init/apply...
-     #   result = sp.run(['terraform','init'], cwd=s
-     #   pass
+        result = sp.run(['terraform', 'apply', '-auto-approve'], cwd=env_path, capture_output=True, text=True)
+        print(result.stdout, result.stderr)
+        if result.returncode != 0:
+            print('terraform apply failed')
+            return
 
-    def gui(self):  #all prints and inputs from gui
-        print('<: Test environment for Kubernetes for Terraform :>')
-        print('-' * 25)
-        print('Choises: ')
-        print('-' * 25)
-        print('1. Base environment \
-            \n2.Writable hostpath \
-            \n3. Managed identity \
-            \n4. Service account \
-            \n5. Scan files \
-            \n6. Cleanup environment')
-        choice = input(':> ')
-        print(self.check_dependencies())
-        print('dependencies checked')
-        self.fetch_mainfest(choice)
+        sp.run(['bash', str(join_script)])
+
+    def scan_files(self):
+        """Run the pre-deploy security scanner on all terraform environments."""
+        findings, out_path = sf.scan_directory(str(TERRAFORM_REPO))
+        found_count = sum(len(v) for v in findings.values())
+        print(f'Scanned {len(findings)} file(s), {found_count} findings. Results: {out_path}')
+
+    def dispatch(self, choice):
+        """
+        Execute the action for the given choice.
+
+        Args:
+            choice: String '1'–'6'.
+        """
+        #self.check_dependencies()
+        if choice in ENVIRONMENTS:
+            self.deploy_environment(choice)
+        elif choice == '5':
+            self.scan_files()
+        elif choice == '6':
+            self.cleanup()
+        else:
+            print(f'Unknown choice: {choice}')
+
+    def cleanup(self):
+        """Tear down all VMs by running the cleanup script."""
+        sp.run(['sudo', 'bash', str(SCRIPTS_DIR / 'cleanup.sh')])
+
 
 def main():
-    test = vulnerabilities_program()
-    test.gui()
+    parser = argparse.ArgumentParser(
+        description='Lateral Movement Lab — deploy and manage Kubernetes test environments'
+    )
+    parser.add_argument(
+        'choice',
+        nargs='?',
+        choices=['1', '2', '3', '4', '5', '6'],
+        help='1=Base, 2=Hostpath, 3=Managed identity, 4=Service account, 5=Scan, 6=Cleanup'
+    )
+    args = parser.parse_args()
+
+    cli = EnvManager()
+    if args.choice:
+        cli.dispatch(args.choice)
+    else:
+        print('Something went wrog')
+
+
+if __name__ == '__main__':
+    main()
+'''
+# Authors: Johnny Norrman, Ida Rynger
+# Bachelor of Network Engineering - MDU University
+# Thesis work: Lateral Movement in Kubernetes Clusters
+
+import searchFiles
+import subprocess as sp
+import shutil
+import argparse
+from pathlib import Path
+
+
+SCRIPTS_DIR = Path(__file__).parent
+TERRAFORM_REPO = SCRIPTS_DIR / 'terraform_repo'
+
+ENVIRONMENTS = {
+    '1': ('Base environment',    TERRAFORM_REPO / 'Base'),
+    '2': ('Writable hostpath',   TERRAFORM_REPO / 'Hostpath'),
+    '3': ('Managed identity',    TERRAFORM_REPO / 'managed_identity'),
+    '4': ('Service account',     TERRAFORM_REPO / 'Service_account'),
+}
+
+
+class LabCLI:
+    TOOLS = ['terraform', 'kubectl', 'multipass']
+
+    def check_dependencies(self):
+        """Check that required tools are installed; install missing ones via apt/snap."""
+        for tool in self.TOOLS:
+            if shutil.which(tool):
+                print(f'{tool} already installed')
+            elif tool == 'multipass':
+                sp.run(['sudo', 'snap', 'install', 'multipass'])
+                print('multipass installed')
+            else:
+                sp.run(['sudo', 'apt', 'install', '-y', tool])
+                print(f'{tool} installed')
+
+    def deploy_environment(self, choice):
+        """
+        Run terraform init + apply for the selected environment, then join workers.
+
+        Args:
+            choice: Menu option string ('1'–'4').
+        """
+        label, env_path = ENVIRONMENTS[choice]
+        join_script = TERRAFORM_REPO / 'join_workers.sh'
+
+        print(f'Deploying: {label}')
+
+        result = sp.run(['terraform', 'init'], cwd=env_path, capture_output=True, text=True)
+        print(result.stdout, result.stderr)
+        if result.returncode != 0:
+            print('terraform init failed')
+            return
+
+        result = sp.run(['terraform', 'apply', '-auto-approve'], cwd=env_path, capture_output=True, text=True)
+        print(result.stdout, result.stderr)
+        if result.returncode != 0:
+            print('terraform apply failed')
+            return
+
+        sp.run(['bash', str(join_script)])
+
+    def scan_files(self):
+        """Run the pre-deploy security scanner on all terraform environments."""
+        findings, out_path = searchFiles.scan_directory(str(TERRAFORM_REPO))
+        found_count = sum(len(v) for v in findings.values())
+        print(f'Scanned {len(findings)} file(s), {found_count} findings. Results: {out_path}')
+
+    def cleanup(self):
+        """Tear down all VMs by running the cleanup script."""
+        sp.run(['sudo', 'bash', str(SCRIPTS_DIR / 'cleanup.sh')])
+
+    def dispatch(self, choice):
+        """
+        Execute the action for the given choice.
+
+        Args:
+            choice: String '1'–'6'.
+        """
+        self.check_dependencies()
+        if choice in ENVIRONMENTS:
+            self.deploy_environment(choice)
+        elif choice == '5':
+            self.scan_files()
+        elif choice == '6':
+            self.cleanup()
+        else:
+            print(f'Unknown choice: {choice}')
+
+    def menu(self):
+        """Display the interactive menu and dispatch to the selected action."""
+        print('<: Test environment for Kubernetes via Terraform :>')
+        print('-' * 25)
+        print('Choices:')
+        print('-' * 25)
+        for key, (label, _) in ENVIRONMENTS.items():
+            print(f'{key}. {label}')
+        print('5. Scan files')
+        print('6. Cleanup environment')
+
+        choice = input(':> ').strip()
+        self.dispatch(choice)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Lateral Movement Lab — deploy and manage Kubernetes test environments'
+    )
+    parser.add_argument(
+        'choice',
+        nargs='?',
+        choices=['1', '2', '3', '4', '5', '6'],
+        help='1=Base, 2=Hostpath, 3=Managed identity, 4=Service account, 5=Scan, 6=Cleanup'
+    )
+    args = parser.parse_args()
+
+    cli = LabCLI()
+    if args.choice:
+        cli.dispatch(args.choice)
+    else:
+        cli.menu()
+
+
+if __name__ == '__main__':
+    main()
+'''

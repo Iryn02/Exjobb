@@ -98,6 +98,33 @@ class SearchFile:
                     )
         return self.write_to_file(all_findings)
 
+    def vulnerabilities_in_memory(self):
+        all_findings = {self.filename: []}
+        keyword_groups = [
+            ('hostpath', self.HOSTPATH_KEYWORDS),
+            ('rbac', self.RBAC_KEYWORDS),
+            ('privileged', self.PRIVILEGED_KEYWORDS),
+            ('network_exposure', self.NETWORK_KEYWORDS),
+            ('security_settings', self.SECURITY_KEYWORDS),
+        ]
+        lines = self.read_file()
+        for label, keywords in keyword_groups:
+            for line_number, line in enumerate(lines, start=1):
+                for word in keywords:
+                    if word in line:
+                        value = line.split(word, 1)[1].strip()
+                        all_findings[self.filename].append(
+                            f'{line_number} [{label}]: {word} {value}'
+                        )
+        for line_number, line in enumerate(lines, start=1):
+            if '#' in line:
+                comment = line.split('#', 1)[1].strip()
+                if comment:
+                    all_findings[self.filename].append(
+                            f'{line_number} [comment]: {comment}'
+                        )
+        return all_findings
+
 
 def scan_directory(dir_path):
     dir_path = p(dir_path)
@@ -107,14 +134,13 @@ def scan_directory(dir_path):
     for pattern in extensions:
         for file in sorted(dir_path.glob(pattern)):
             sf = SearchFile(str(file.resolve()))
-            findings = sf.vulnerabilities()
-            # read back the JSON we just wrote to merge into all_findings
-            with open(findings) as f:
-                file_findings = json.load(f)
-            for file_key, hits in file_findings.items():
+            # Samla findings direkt utan att skriva till fil
+            findings = sf.vulnerabilities_in_memory()
+            for file_key, hits in findings.items():
                 if hits:
                     all_findings[file_key] = hits
 
+    # Skriv bara EN gång till fil
     dummy = SearchFile('')
     out_path = dummy.write_to_file(all_findings)
     return all_findings, out_path
