@@ -6,7 +6,7 @@
 
 
 import Exjobb
-import Exjobb.cl_parser
+import tfvulnerabilities.cl_parser
 
 
 def test_true():
