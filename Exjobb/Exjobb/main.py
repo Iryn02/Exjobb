@@ -14,7 +14,9 @@ INSERT MODULE DESCRIPTION HERE.
 __all__ = ()
 
 import sys
-from tfvulnerability.cl_parser import parse_args
+from Exjobb.cl_parser import parse_args
+from setup import *
+from searchfiles import *
 
 
 
