@@ -1,4 +1,4 @@
-"""
+'''
 Lateral Movement Lab — Security File Scanner
 ============================================
 -*- encoding: utf-8 -*-
@@ -26,17 +26,12 @@ Extending:
     in the SearchFile class:
 
         SUPPORTED_EXTENSIONS = ['.tf', '.tf.json', '.yaml', '.yml', '.toml']
-"""
+'''
 
-import subprocess # to run linux commands
-from pathlib import Path as p # for filepaths
+import subprocess
+from pathlib import Path as p
 import json
 import re
-
-#skript ska kunna läsa .tf filer, yml filer (kubernetes)
-#Kolla efter fraser som kan vara lösenord eller liknande med Dragr
-#vilka portar som är öppna
-#certifikat och liknande
 
 class SearchFile:
     '''
@@ -261,13 +256,11 @@ def scan_directory(dir_path):
     for pattern in extensions:
         for file in sorted(dir_path.glob(pattern)):
             sf = SearchFile(str(file.resolve()))
-            # Samla findings direkt utan att skriva till fil
             findings = sf.vulnerabilities_in_memory()
             for file_key, hits in findings.items():
                 if hits:
                     all_findings[file_key] = hits
 
-    # Skriv bara EN gång till fil
     dummy = SearchFile('')
     out_path = dummy.write_to_file(all_findings)
     return all_findings, out_path
