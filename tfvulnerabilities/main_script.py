@@ -90,16 +90,45 @@ class EnvManager:
 
     def scan_files(self):
         '''
-        Run a security scan on all Terraform environments configurations
+        Prompt the user for a path, then run a security scan on the target.
 
-        Scans the terraform repository for misconfigurations or security issues
-        using the search_files module, then prints a summary of findings and
-        the path to the full results file.
+        Accepts a file path or directory path. Defaults to the Terraform repo
+        if the user presses Enter without input. Prints a summary of findings
+        and the path to the full results JSON file.
         '''
 
-        findings, out_path = sf.scan_directory(str(self.terraform_repo))
-        found_count = sum(len(v) for v in findings.values())
-        print(f'Scanned {len(findings)} file(s), {found_count} findings. Results: {out_path}')
+        prompt = f'Enter path to scan (default: {self.terraform_repo}): '
+        user_input = input(prompt).strip()
+        scan_path = user_input if user_input else str(self.terraform_repo)
+
+        path = Path(scan_path)
+        if not path.exists():
+            print(f'Path not found: {scan_path}')
+            return
+
+        if path.is_dir():
+            findings, out_path = sf.scan_directory(scan_path)
+            subdirs = [d for d in path.iterdir() if d.is_dir()]
+            if subdirs:
+                total_files = sum(len(repo['files']) for repo in findings.values())
+                total_hits = sum(
+                    count
+                    for repo in findings.values()
+                    for count in repo['summary'].values()
+                )
+                print(f'Scanned {len(findings)} repo(s), {total_files} file(s), {total_hits} findings. Results: {out_path}')
+            else:
+                total_hits = sum(
+                    count
+                    for file_data in findings.values()
+                    for cat, count in file_data['summary'].items()
+                    if cat != 'comments'
+                )
+                print(f'Scanned {len(findings)} file(s), {total_hits} findings. Results: {out_path}')
+        else:
+            scanner = sf.SearchFile(scan_path)
+            out_path = scanner.file_search()
+            print(f'Results: {out_path}')
 
     def dispatch(self, choice):
         """
