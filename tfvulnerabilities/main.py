@@ -15,8 +15,8 @@ __all__ = ()
 
 import sys
 from tfvulnerabilities.cl_parser import parse_args
-from Exjobb.tfvulnerabilities.main_script import *
-from Exjobb.tfvulnerabilities.search_files import *
+from tfvulnerabilities.main_script import *
+from tfvulnerabilities.search_files import *
 
 
 
