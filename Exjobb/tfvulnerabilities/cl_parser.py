@@ -1,5 +1,6 @@
 # -*- encoding: utf-8 -*-
 # tfvulnerability v0.1.0
+# Thesis work - Mälardalens universitet
 # Terraform vulnerability scanner and infrastructure environment setup
 # Copyright 2026, Ida Rynger Johnny Norrman.
 # See /LICENSE for licensing information.
