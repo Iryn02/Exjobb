@@ -30,6 +30,7 @@ from pathlib import Path
 import search_files as sf
 
 SCRIPTS_DIR = Path(__file__).parent
+SHELL_DIR = SCRIPTS_DIR.parent / 'shell'
 TERRAFORM_REPO = SCRIPTS_DIR / 'terraform_repo'
 
 ENVIRONMENTS = {
@@ -58,6 +59,7 @@ class EnvManager:
     def __init__(self, ):
         self.terraform_repo = TERRAFORM_REPO
         self.scripts_dir = SCRIPTS_DIR
+        self.shell_dir = SHELL_DIR
 
     def deploy_environment(self, choice): #get manifest files for correct assignment
         """
@@ -68,19 +70,19 @@ class EnvManager:
             choice: Menu option string ('1'–'4').
         """
         label, env_path = ENVIRONMENTS[choice]
-        join_script = self.terraform_repo / 'join_workers.sh'
+        join_script = self.shell_dir / 'join_workers.sh'
 
         print(f'Deploying: {label}')
 
         result = sp.run(['terraform', 'init'], cwd=env_path,
-                        capture_output=True, text=True, check=False)
+                        text=True, check=False)
         print(result.stdout, result.stderr)
         if result.returncode != 0:
             print('terraform init failed')
             return
 
         result = sp.run(['terraform', 'apply', '-auto-approve'],
-                        cwd=env_path, capture_output=True, text=True, check=False)
+                        cwd=env_path, text=True, check=False)
         print(result.stdout, result.stderr)
         if result.returncode != 0:
             print('terraform apply failed')
@@ -151,7 +153,7 @@ class EnvManager:
         '''
         Tear down all VMs and instances using bash script cleanup.sh
         '''
-        sp.run(['sudo', 'bash', str(self.scripts_dir / 'cleanup.sh')], check=True)
+        sp.run(['sudo', 'bash', str(self.shell_dir / 'cleanup.sh')], check=True)
 
 
 def main():

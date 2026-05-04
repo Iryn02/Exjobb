@@ -89,6 +89,6 @@ resource "null_resource" "join_workers" {
   }
 
   provisioner "local-exec" {
-    command = "bash ${path.module}/../join_workers.sh ${each.value.cluster_name} ${each.value.key}"
+    command = "bash ${path.module}/../../../join_workers.sh ${each.value.cluster_name} ${each.value.key}"
   }
 }
