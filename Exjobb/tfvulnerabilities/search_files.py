@@ -1,6 +1,32 @@
-# Authors: Johnny Norrman, Ida Rynger
-# Bachelor of Network Engineering - MDU University
-# Thesis work: Lateral Movement in Kubernetes Clusters
+"""
+Lateral Movement Lab — Security File Scanner
+============================================
+-*- encoding: utf-8 -*-
+tfvulnerability v0.1.0
+Bachelor of Network Engineering, MDU University
+Authors: Johnny Norrman, Ida Rynger
+Copyright © 2026, Ida Rynger Johnny Norrman.
+See /LICENSE for licensing information
+
+Scans Terraform and Kubernetes configuration files for potential security
+misconfigurations and vulnerability indicators such as privileged containers,
+exposed ports, and overly permissive RBAC settings.
+
+Usage:
+    python search_files.py
+
+    When prompted, enter a file path or directory path to scan.
+    Supports: .tf, .tf.json, .yaml, .yml
+
+    Results are written to a numbered JSON file in the same directory:
+        vulnFilesScript1.json, vulnFilesScript2.json, ...
+
+Extending:
+    To add support for additional file types, update SUPPORTED_EXTENSIONS
+    in the SearchFile class:
+
+        SUPPORTED_EXTENSIONS = ['.tf', '.tf.json', '.yaml', '.yml', '.toml']
+"""
 
 import subprocess # to run linux commands
 from pathlib import Path as p # for filepaths
@@ -13,17 +39,47 @@ import re
 #certifikat och liknande
 
 class SearchFile:
+    '''
+    Scans a single configuration file for security misconfigurations.
+
+    Searches Terraform and Kubernetes files for vulnerability indicators
+    grouped by category: hostpath mounts, RBAC settings, privileged containers,
+    network exposure, and security context settings. Results can be written
+    to a numbered JSON file or returned in memory for batch scanning.
+
+    Attributes:
+        filename (str): Path to the file to be scanned.
+
+    Example:
+        scanner = SearchFile('terraform_repo/base/main.tf')
+        scanner.file_search()
+    '''
+
     HOSTPATH_KEYWORDS = ['hostPath:', 'path: /', 'path: /etc', 'path: /var']
     RBAC_KEYWORDS = ['serviceAccountName:', 'automountServiceAccountToken:', 'cluster-admin', 'ClusterRoleBinding']
     PRIVILEGED_KEYWORDS = ['privileged: true', 'hostNetwork: true', 'hostPID: true', 'hostIPC: true', 'access_token']
     NETWORK_KEYWORDS = ['hostPort:', 'type: NodePort', 'type: LoadBalancer', '0.0.0.0']
     SECURITY_KEYWORDS = ['runAsUser: 0', 'allowPrivilegeEscalation: true', '  add:', 'NET_ADMIN', 'SYS_ADMIN']
+    SUPPORTED_EXTENSIONS = {'.tf', '.tf.json', '.yaml', '.yml'}
 
     def __init__(self, filename):
+        '''
+        Initialize the scanner with a target file.
+
+        Args:
+            filename (str): Path to the file to scan.
+        '''
         self.filename = str(filename)
 
 
     def read_file(self):
+        '''
+        Read and return the contents of the target file.
+
+        Returns:
+            list[str]: A list of lines from the file.
+        '''
+
         file_path = p(self.filename)
         if not file_path.is_absolute():
             file_path = p(__file__).parent / self.filename
@@ -32,6 +88,20 @@ class SearchFile:
         return read_file
 
     def write_to_file(self, temp_list, base_name='vulnFilesScript'):
+        '''
+         Write scan findings to a numbered JSON file.
+
+        Automatically increments the file number to avoid overwriting
+        previous results (e.g. vulnFilesScript1.json, vulnFilesScript2.json).
+
+        Args:
+            temp_list (dict): Findings to write, keyed by filename.
+            base_name (str): Base name for the output file. Defaults to 'vulnFilesScript'.
+
+        Returns:
+            str: Path to the written output file.
+        '''
+
         path = p(__file__).parent
         files = list(path.glob(f'{base_name}*.json'))
 
@@ -50,9 +120,18 @@ class SearchFile:
         return str(out_file)
 
     def file_search(self):
-        if self.filename.endswith('.tf') or self.filename.endswith('.tf.json'):
-            return self.vulnerabilities()
-        elif self.filename.endswith('.yaml') or self.filename.endswith('.yml'):
+        '''
+        Validate the file type and run the vulnerability scan.
+
+        Supported types are defined in SUPPORTED_EXTENSIONS. If the file
+        type is not supported, the user is prompted to continue or abort.
+
+        Returns:
+            str: Path to the output file, or 'Stopping' if the user aborted.
+        '''
+
+        ext = p(self.filename).suffix
+        if ext in self.SUPPORTED_EXTENSIONS:
             return self.vulnerabilities()
         else:
             if_not_correct = input('Filetype not supported. Do you want to continue anyway?[y/n]: ').lower()
@@ -62,6 +141,16 @@ class SearchFile:
                 return 'Stopping'
 
     def search_keyword(self, keywords):
+        '''
+        Search the file for a specific list of keywords and write findings to file.
+
+        Args:
+            keywords (list[str]): Keywords to search for in the file.
+
+        Returns:
+            str: Path to the output file containing findings.
+        '''
+
         temp_list = {self.filename: []}
         for line_number, i in enumerate(self.read_file(), start=1):
             for word in keywords:
@@ -72,6 +161,15 @@ class SearchFile:
         return self.write_to_file(temp_list)
 
     def vulnerabilities(self):
+        '''
+        Run a full vulnerability scan and write findings to a JSON file.
+
+        Scans all keyword groups and extracts any comments found in the file.
+
+        Returns:
+            str: Path to the output file containing findings.
+        '''
+
         all_findings = {self.filename: []}
         keyword_groups = [
             ('hostpath', self.HOSTPATH_KEYWORDS),
@@ -99,6 +197,16 @@ class SearchFile:
         return self.write_to_file(all_findings)
 
     def vulnerabilities_in_memory(self):
+        '''
+         Run a full vulnerability scan and return findings in memory.
+
+        Identical to vulnerabilities() but does not write to disk.
+        Used by scan_directory() to batch results before writing once.
+
+        Returns:
+            dict: Findings keyed by filename, each value a list of finding strings.
+        '''
+
         all_findings = {self.filename: []}
         keyword_groups = [
             ('hostpath', self.HOSTPATH_KEYWORDS),
@@ -127,6 +235,25 @@ class SearchFile:
 
 
 def scan_directory(dir_path):
+    '''
+    Recursively scan a directory for vulnerable configuration files.
+
+    Searches for all .tf, .tf.json, .yaml and .yml files, runs
+    vulnerabilities_in_memory() on each, then writes all findings
+    to a single JSON output file.
+
+    Args:
+        dir_path (str): Path to the directory to scan.
+
+    Returns:
+        tuple:
+            dict: All findings keyed by filename.
+            str: Path to the written output file.
+
+    Example:
+        findings, out_path = scan_directory('terraform_repo/')
+    '''
+
     dir_path = p(dir_path)
     extensions = ['**/*.tf', '**/*.tf.json', '**/*.yaml', '**/*.yml']
     all_findings = {}

@@ -4,7 +4,7 @@
 
 Author: Ida Rynger Johnny Norrman <ida.rynger@gmail.com> <johnny.norrman@hotmail.com>
 
-Copyright: © 2026, Ida Rynger Johnny Norrman.
+Copyright: © 2026, Ida Rynger, Johnny Norrman.
 
 Date: 2026-01-19
 
