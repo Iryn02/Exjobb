@@ -14,7 +14,7 @@ Version: 0.1.0
 ## PURPOSE
 This tool scans Terraform configurations for security vulnerabilities and automates the setup and deployment of infrastructure environments using Terraform and Kubernetes. It is a tool for analysing the possibilities for lateral movement between Kubernetes clusters based on known and published vulnerabilties on https://kubenomicon.com/
 
-## PROJECT STRUKTURE
+## PROJECT STRUCTURE
 
 ```
 Exjobb/
