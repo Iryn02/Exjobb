@@ -33,10 +33,10 @@ SCRIPTS_DIR = Path(__file__).parent
 TERRAFORM_REPO = SCRIPTS_DIR / 'terraform_repo'
 
 ENVIRONMENTS = {
-    '1': ('Base environment',    TERRAFORM_REPO / 'Base'),
-    '2': ('Writable hostpath',   TERRAFORM_REPO / 'Hostpath'),
+    '1': ('Base environment',    TERRAFORM_REPO / 'base'),
+    '2': ('Writable hostpath',   TERRAFORM_REPO / 'host_path'),
     '3': ('Managed identity',    TERRAFORM_REPO / 'managed_identity'),
-    '4': ('Service account',     TERRAFORM_REPO / 'Service_account'),
+    '4': ('Service account',     TERRAFORM_REPO / 'service_account'),
 }
 class EnvManager:
     '''
