@@ -261,41 +261,67 @@ class SearchFile:
 def scan_directory(dir_path):
     '''
     Recursively scan a directory for vulnerable configuration files.
-
+ 
     If the given directory contains subdirectories, each subdirectory is
     treated as a separate repository and results are grouped by repo name.
     If the directory contains no subdirectories (i.e. it is already a single
     repo), the original flat behaviour is used.
-
+ 
     Searches for all .tf, .tf.json, .yaml and .yml files, runs
     vulnerabilities_in_memory() on each, then writes all findings
     to a single JSON output file.
-
+ 
     Args:
         dir_path (str): Path to the directory (or parent of repos) to scan.
-
+ 
     Returns:
         tuple:
             dict: All findings. Keyed by repo name when scanning multiple
                   repos, or by filename when scanning a single directory.
             str: Path to the written output file.
-
+ 
     Example:
         # Single repo
         findings, out_path = scan_directory('terraform_repo/')
-
+ 
         # Parent folder with multiple repos
         findings, out_path = scan_directory('all_repos/')
     '''
-
+ 
     dir_path = p(dir_path)
     extensions = ['**/*.tf', '**/*.tf.json', '**/*.yaml', '**/*.yml']
-
+ 
     subdirs = [d for d in sorted(dir_path.iterdir()) if d.is_dir()]
     is_multi_repo = len(subdirs) > 0
-
+ 
     if is_multi_repo:
         all_findings = {}
+ 
+        # Skanna filer direkt i rotmappen (ej rekursivt)
+        root_findings = {}
+        for pattern in ['*.tf', '*.tf.json', '*.yaml', '*.yml']:
+            for file in sorted(dir_path.glob(pattern)):
+                sf = SearchFile(str(file.resolve()))
+                findings = sf.vulnerabilities_in_memory()
+                for file_key, file_data in findings.items():
+                    total_hits = sum(
+                        count for cat, count in file_data['summary'].items()
+                        if cat != 'comments'
+                    )
+                    if total_hits > 0:
+                        root_findings[file_key] = file_data
+ 
+        if root_findings:
+            root_summary = {}
+            for file_data in root_findings.values():
+                for cat, count in file_data['summary'].items():
+                    if cat != 'comments':
+                        root_summary[cat] = root_summary.get(cat, 0) + count
+            all_findings[dir_path.name] = {
+                'summary': root_summary,
+                'files': root_findings,
+            }
+ 
         for repo_dir in subdirs:
             repo_findings = {}
             for pattern in extensions:
@@ -309,13 +335,13 @@ def scan_directory(dir_path):
                         )
                         if total_hits > 0:
                             repo_findings[file_key] = file_data
-
+ 
             repo_summary = {}
             for file_data in repo_findings.values():
                 for cat, count in file_data['summary'].items():
                     if cat != 'comments':
                         repo_summary[cat] = repo_summary.get(cat, 0) + count
-
+ 
             all_findings[repo_dir.name] = {
                 'summary': repo_summary,
                 'files': repo_findings,
@@ -333,10 +359,11 @@ def scan_directory(dir_path):
                     )
                     if total_hits > 0:
                         all_findings[file_key] = file_data
-
+ 
     dummy = SearchFile('')
     out_path = dummy.write_to_file(all_findings)
     return all_findings, out_path
+ 
 
 
 if __name__ == '__main__':
