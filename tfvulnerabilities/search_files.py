@@ -330,7 +330,7 @@ if __name__ == '__main__':
             for cat, count in g['summary'].items()
             if cat != 'comments'
         )
-        print(f'Skannade {len(findings)} grupp(er), {total_files} fil(er), {total_hits} fynd. Resultat: {out_path}')
+        print(f'Skannade {len(findings)} repo(n), {total_files} fil(er), {total_hits} fynd. Resultat: {out_path}')
     else:
         ob_test = SearchFile(path_input)
         result = ob_test.file_search()
