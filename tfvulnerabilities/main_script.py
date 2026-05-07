@@ -117,7 +117,8 @@ class EnvManager:
                 total_hits = sum(
                     count
                     for repo in findings.values()
-                    for count in repo['summary'].values()
+                    for cat, count in repo['summary'].items()
+                    if cat != 'comments'
                 )
                 print(f'Scanned {len(findings)} repo(s), {total_files} file(s), {total_hits} findings. Results: {out_path}')
             else:
