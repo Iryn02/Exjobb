@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 '''
 Lateral Movement Lab — Security File Scanner
 ============================================
